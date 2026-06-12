@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>폴리마켓 완전 정복 — 블록체인 기초 & 작동 원리</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+<style>
+/* ===========================================
+   VIEWPORT FITTING: MANDATORY BASE
+   =========================================== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body { height: 100%; overflow-x: hidden; }
+html { scroll-snap-type: y mandatory; scroll-behavior: smooth; }
+
+:root {
+  --title-size: clamp(1.5rem, 5vw, 4rem);
+  --h2-size: clamp(1.25rem, 3.5vw, 2.5rem);
+  --h3-size: clamp(1rem, 2.5vw, 1.6rem);
+  --body-size: clamp(0.78rem, 1.5vw, 1.1rem);
+  --small-size: clamp(0.62rem, 1vw, 0.85rem);
+  --slide-padding: clamp(1.1rem, 4vw, 4rem);
+  --content-gap: clamp(0.5rem, 2vw, 1.6rem);
+  --element-gap: clamp(0.3rem, 1vw, 0.9rem);
+
+  /* Theme: Prediction Terminal */
+  --bg: #0a0e16;
+  --bg-2: #0d1220;
+  --surface: #141b2b;
+  --surface-2: #1b2436;
+  --text: #eef2f8;
+  --muted: #9aa7bd;
+  --yes: #2ad6a5;        /* 초록 = Yes */
+  --no: #ff5d6c;         /* 빨강 = No  */
+  --accent: #8b6cf6;     /* Polygon 바이올렛 */
+  --gold: #f6c453;       /* 강조 */
+  --line: rgba(255,255,255,0.09);
+  --mono: 'JetBrains Mono', monospace;
+  --sans: 'Space Grotesk', sans-serif;
+}
+
+body {
+  font-family: var(--sans);
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Atmospheric background: radial glows + faint grid */
+body::before {
+  content: ""; position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background:
+    radial-gradient(60vw 60vw at 12% 8%, rgba(139,108,246,0.16), transparent 60%),
+    radial-gradient(55vw 55vw at 88% 92%, rgba(42,214,165,0.12), transparent 60%),
+    radial-gradient(45vw 45vw at 92% 10%, rgba(255,93,108,0.08), transparent 60%);
+}
+body::after {
+  content: ""; position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: .35;
+  background-image:
+    linear-gradient(var(--line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--line) 1px, transparent 1px);
+  background-size: clamp(40px, 6vw, 90px) clamp(40px, 6vw, 90px);
+  -webkit-mask-image: radial-gradient(circle at 50% 50%, #000 30%, transparent 85%);
+  mask-image: radial-gradient(circle at 50% 50%, #000 30%, transparent 85%);
+}
+
+.slide {
+  width: 100vw; height: 100vh; height: 100dvh;
+  overflow: hidden; scroll-snap-align: start;
+  display: flex; flex-direction: column; position: relative; z-index: 1;
+}
+.slide-content {
+  flex: 1; display: flex; flex-direction: column; justify-content: center;
+  max-height: 100%; overflow: hidden; padding: var(--slide-padding);
+  max-width: 1200px; margin: 0 auto; width: 100%;
+}
+
+/* Typography */
+h1 { font-size: var(--title-size); font-weight: 700; line-height: 1.05; letter-spacing: -0.02em; }
+h2 { font-size: var(--h2-size); font-weight: 700; line-height: 1.12; letter-spacing: -0.015em; }
+h3 { font-size: var(--h3-size); font-weight: 600; }
+p  { font-size: var(--body-size); color: var(--muted); }
+.mono { font-family: var(--mono); }
+
+/* Eyebrow / section label */
+.eyebrow {
+  font-family: var(--mono); font-size: var(--small-size); letter-spacing: .25em;
+  text-transform: uppercase; color: var(--accent); margin-bottom: var(--element-gap);
+  display: flex; align-items: center; gap: .6em;
+}
+.eyebrow::before { content: ""; width: clamp(18px,3vw,40px); height: 2px; background: var(--accent); display: inline-block; }
+
+.yes { color: var(--yes); } .no { color: var(--no); }
+.gold { color: var(--gold); } .vio { color: var(--accent); }
+strong { color: var(--text); font-weight: 600; }
+
+/* Cards / grids */
+.grid { display: grid; gap: clamp(0.5rem, 1.4vw, 1rem); }
+.card {
+  background: linear-gradient(160deg, var(--surface), var(--bg-2));
+  border: 1px solid var(--line); border-radius: 14px;
+  padding: clamp(0.7rem, 1.8vw, 1.3rem);
+}
+.card h3 { margin-bottom: .25em; }
+.card p { font-size: var(--small-size); line-height: 1.45; }
+.tag {
+  font-family: var(--mono); font-size: var(--small-size); color: var(--muted);
+  border: 1px solid var(--line); border-radius: 999px; padding: .2em .8em; display: inline-block;
+}
+
+/* Analogy chip */
+.analogy {
+  display: inline-flex; align-items: center; gap: .5em; font-size: var(--small-size);
+  font-family: var(--mono); color: var(--gold);
+  background: rgba(246,196,83,0.08); border: 1px solid rgba(246,196,83,0.25);
+  border-radius: 8px; padding: .35em .8em; margin-top: var(--element-gap);
+}
+
+/* Flow chain */
+.flow { display: flex; flex-wrap: wrap; align-items: stretch; gap: clamp(.4rem,1vw,.8rem); }
+.flow .node {
+  flex: 1 1 0; min-width: 110px; background: var(--surface); border: 1px solid var(--line);
+  border-radius: 12px; padding: clamp(.6rem,1.4vw,1rem); text-align: center;
+}
+.flow .node .n { font-family: var(--mono); color: var(--accent); font-size: var(--small-size); }
+.flow .node h3 { font-size: var(--body-size); margin-top: .2em; }
+.flow .node p { font-size: var(--small-size); margin-top: .15em; }
+.flow .arrow { align-self: center; color: var(--accent); font-size: clamp(1rem,2vw,1.6rem); }
+
+/* Big equation */
+.equation {
+  display: flex; align-items: center; justify-content: center; gap: clamp(.4rem,1.5vw,1.2rem);
+  font-family: var(--mono); font-weight: 700; flex-wrap: wrap;
+  font-size: clamp(1.6rem, 6vw, 4.5rem); letter-spacing: -.02em;
+}
+.equation .pill { border-radius: 14px; padding: .12em .5em; border: 2px solid; }
+.equation .y { color: var(--yes); border-color: rgba(42,214,165,.5); background: rgba(42,214,165,.08); text-shadow: 0 0 30px rgba(42,214,165,.35); }
+.equation .nn { color: var(--no); border-color: rgba(255,93,108,.5); background: rgba(255,93,108,.08); text-shadow: 0 0 30px rgba(255,93,108,.35); }
+.equation .eq, .equation .plus { color: var(--muted); }
+.equation .dollar { color: var(--gold); text-shadow: 0 0 30px rgba(246,196,83,.4); }
+
+/* Code block */
+pre {
+  font-family: var(--mono); font-size: clamp(.62rem,1.15vw,.92rem); line-height: 1.6;
+  background: #070b12; border: 1px solid var(--line); border-radius: 12px;
+  padding: clamp(.8rem,1.8vw,1.3rem); color: #c9d4e6; overflow: hidden;
+}
+
+/* Section divider slide */
+.divider .big-num {
+  font-family: var(--mono); font-weight: 700; font-size: clamp(5rem, 26vw, 22rem);
+  line-height: .8; color: transparent;
+  -webkit-text-stroke: 2px rgba(255,255,255,.14); position: absolute;
+  right: clamp(1rem,4vw,5rem); bottom: clamp(-1rem,1vw,2rem); z-index: 0; pointer-events: none;
+}
+
+/* Lists */
+.blist { list-style: none; display: flex; flex-direction: column; gap: clamp(.4rem,1vh,.9rem); }
+.blist li { font-size: var(--body-size); display: flex; gap: .6em; align-items: baseline; }
+.blist li::before { content: "▸"; color: var(--accent); flex: none; }
+
+/* Stat row */
+.stats { display: flex; gap: clamp(.6rem,2vw,1.6rem); flex-wrap: wrap; }
+.stat { flex: 1 1 0; min-width: 120px; }
+.stat .v { font-family: var(--mono); font-weight: 700; font-size: clamp(1.3rem,3.5vw,2.6rem); }
+.stat .l { font-size: var(--small-size); color: var(--muted); }
+
+/* Header row on content slides */
+.shead { margin-bottom: var(--content-gap); }
+.shead h2 .lead { color: var(--accent); font-family: var(--mono); font-size: .6em; margin-right: .4em; }
+
+/* Progress + counter */
+.progress { position: fixed; top: 0; left: 0; height: 3px; background: linear-gradient(90deg, var(--accent), var(--yes)); width: 0%; z-index: 50; transition: width .3s ease; }
+.counter { position: fixed; bottom: clamp(.6rem,2vh,1.4rem); right: clamp(.8rem,2vw,1.6rem); font-family: var(--mono); font-size: var(--small-size); color: var(--muted); z-index: 50; }
+.counter b { color: var(--text); }
+.khint { position: fixed; bottom: clamp(.6rem,2vh,1.4rem); left: clamp(.8rem,2vw,1.6rem); font-family: var(--mono); font-size: var(--small-size); color: var(--muted); z-index: 50; opacity:.7; }
+
+/* Reveal animation */
+.reveal { opacity: 0; transform: translateY(22px); transition: opacity .6s cubic-bezier(.16,1,.3,1), transform .6s cubic-bezier(.16,1,.3,1); }
+.slide.active .reveal { opacity: 1; transform: none; }
+.slide.active .reveal:nth-child(2){ transition-delay:.07s;}
+.slide.active .reveal:nth-child(3){ transition-delay:.14s;}
+.slide.active .reveal:nth-child(4){ transition-delay:.21s;}
+.slide.active .reveal:nth-child(5){ transition-delay:.28s;}
+.slide.active .reveal:nth-child(6){ transition-delay:.35s;}
+.stagger > * { opacity: 0; transform: translateY(18px); transition: opacity .5s ease, transform .5s cubic-bezier(.16,1,.3,1); }
+.slide.active .stagger > * { opacity: 1; transform: none; }
+.slide.active .stagger > *:nth-child(2){transition-delay:.08s;}
+.slide.active .stagger > *:nth-child(3){transition-delay:.16s;}
+.slide.active .stagger > *:nth-child(4){transition-delay:.24s;}
+.slide.active .stagger > *:nth-child(5){transition-delay:.32s;}
+.slide.active .stagger > *:nth-child(6){transition-delay:.40s;}
+
+.muted-note { font-size: var(--small-size); color: var(--muted); }
+.kpi { font-family: var(--mono); color: var(--gold); }
+
+/* Short screens */
+@media (max-height: 700px){ :root{ --slide-padding: clamp(.8rem,3vw,2rem); --content-gap: clamp(.4rem,1.5vw,1rem);} }
+@media (max-height: 600px){ .khint{display:none;} .divider .big-num{font-size:clamp(4rem,20vw,14rem);} }
+@media (max-width: 600px){ .grid{grid-template-columns:1fr!important;} .flow{flex-direction:column;} .flow .arrow{transform:rotate(90deg);} }
+
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{ animation-duration:.01ms!important; transition-duration:.2s!important; }
+  html{ scroll-behavior:auto; }
+  .reveal,.stagger > *{ opacity:1!important; transform:none!important; }
+}
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<div class="counter"><b id="cur">01</b> / <span id="total">38</span></div>
+<div class="khint">↑ ↓ · Space · 화살표로 이동</div>
+
+<main>
+
+<!-- 1. TITLE -->
+<section class="slide" id="s1">
+  <div class="slide-content" style="justify-content:center;">
+    <div class="eyebrow reveal">Blockchain Study · Prediction Market</div>
+    <h1 class="reveal">폴리마켓<span class="vio">.</span><br/>완전 정복</h1>
+    <p class="reveal" style="font-size:var(--h3-size); color:var(--text); max-width:42ch; margin-top:var(--content-gap);">
+      <span class="yes">Yes</span>냐 <span class="no">No</span>냐 — 미래의 확률에 베팅하는
+      <strong>탈중앙 예측시장</strong>을 블록체인 기초부터 작동 원리까지.
+    </p>
+    <div class="reveal" style="margin-top:var(--content-gap); display:flex; gap:.6rem; flex-wrap:wrap;">
+      <span class="tag">Part 1 · 블록체인 기초</span>
+      <span class="tag">Part 2 · 작동 원리</span>
+      <span class="tag">Part 3 · 심화 &amp; 확장</span>
+      <span class="tag">입문자용 · 40~50분</span>
+    </div>
+  </div>
+</section>
+
+<!-- 2. ONE-LINE DEFINITION -->
+<section class="slide">
+  <div class="slide-content">
+    <div class="eyebrow reveal">한 줄 정의</div>
+    <h2 class="reveal" style="max-width:20ch;">한 문장으로<br/>폴리마켓이란?</h2>
+    <div class="card reveal" style="margin-top:var(--content-gap); border-left:3px solid var(--accent);">
+      <p style="font-size:var(--h3-size); color:var(--text); line-height:1.45;">
+        <span class="vio mono">Polygon</span> 위에서 <span class="gold mono">USDC</span>로,
+        미래 사건의 <strong>확률</strong>(<span class="yes">Yes</span>/<span class="no">No</span> 토큰)을
+        사고파는 <strong>탈중앙 예측시장</strong>.
+      </p>
+    </div>
+    <p class="reveal" style="margin-top:var(--content-gap);">"내일 비 올까?" "누가 당선될까?" — 돈을 걸면 사람은 진심으로 예측한다 = <strong>집단지성</strong>.</p>
+  </div>
+</section>
+
+<!-- 3. AGENDA -->
+<section class="slide">
+  <div class="slide-content">
+    <div class="eyebrow reveal">발표 흐름</div>
+    <h2 class="reveal">오늘의 여정</h2>
+    <div class="grid stagger" style="grid-template-columns:repeat(3,1fr); margin-top:var(--content-gap);">
+      <div class="card"><span class="tag">Part 1</span><h3 style="margin-top:.4em;">블록체인 기초</h3><p>기본 지식 10가지 + 폴리마켓 사용처 지도</p></div>
+      <div class="card"><span class="tag">Part 2</span><h3 style="margin-top:.4em;">작동 원리</h3><p>입금 → 토큰화 → 거래 → 판정 → 정산</p></div>
+      <div class="card"><span class="tag">Part 3</span><h3 style="margin-top:.4em;">심화 &amp; 확장</h3><p>오더북 심화 · USDC 멀티체인 · Circle Arc · 직접 만들기</p></div>
+    </div>
+    <p class="reveal" style="margin-top:var(--content-gap);">핵심 원칙: <strong>"어떻게 돌아가나"를 비유로</strong> 이해하기 🧠</p>
+  </div>
+</section>
+
+<!-- 4. PART 1 DIVIDER -->
+<section class="slide divider">
+  <div class="slide-content" style="justify-content:center;">
+    <div class="eyebrow reveal">Part One</div>
+    <h1 class="reveal">블록체인<br/>기초 기술</h1>
+    <p class="reveal" style="margin-top:var(--content-gap); max-width:40ch;">장부 · 가스 · 스마트 컨트랙트 · Polygon · 토큰 · 서명 · 오라클 · 스테이블코인 · 오더북</p>
+    <span class="big-num">1</span>
+  </div>
+</section>
+
+<!-- 5. 블록체인이란 -->
+<section class="slide">
+  <div class="slide-content">
+    <div class="shead reveal"><h2><span class="lead">1-1</span>블록체인이란?</h2></div>
+    <p class="reveal">은행은 장부를 <strong>한 곳</strong>에만 둡니다. 블록체인은 <strong>수천 명이 똑같은 장부</strong>를 나눠 가져요.</p>
+    <div class="grid stagger" style="grid-template-columns:repeat(3,1fr); margin-top:var(--content-gap);">
+      <div class="card"><h3>분산</h3><p>장부를 모두가 나눠 가짐</p></div>
+      <div class="card"><h3>불변</h3><p>한 번 적히면 못 고침</p></div>
+      <div class="card"><h3>투명</h3><p>누구나 열람 가능</p></div>
+    </div>
+    <div class="analogy reveal">🏦 비유 — 동네 사람 수천 명이 들고 있는 "공동 장부"</div>
+  </div>
+</section>
+
+<!-- 6. 트랜잭션·블록·합의 -->
+<section class="slide">
+  <div class="slide-content">
+    <div class="shead reveal"><h2><span class="lead">1-2</span>트랜잭션 · 블록 · 합의</h2></div>
+    <div class="flow stagger" style="margin-top:.5rem;">
+      <div class="node"><div class="n">택배 1개</div><h3>트랜잭션</h3><p>거래 1건</p></div>
+      <div class="arrow">→</div>
+      <div class="node"><div class="n">택배 상자</div><h3>블록</h3><p>거래를 모음</p></div>
+      <div class="arrow">→</div>
+      <div class="node"><div class="n">봉인 도장</div><h3>합의</h3><p>모두가 동의</p></div>
+      <div class="arrow">→</div>
+      <div class="node"><div class="n">사슬</div><h3>블록체인</h3><p>영구 기록</p></div>
+    </div>
+    <p class="reveal" style="margin-top:var(--content-gap);">합의 방식: <strong>PoW</strong>(계산 노동·비트코인) vs <strong>PoS</strong>(코인 담보·이더리움/Polygon). 공통점 = <span class="gold">"조작하려면 큰 비용, 정직이 이득"</span>.</p>
+  </div>
+</section>
+
+<!-- 7. 가스 -->
+<section class="slide">
+  <div class="slide-content">
+    <div class="shead reveal"><h2><span class="lead">1-3</span>가스(Gas)와 가스비 ⛽</h2></div>
+    <p class="reveal">블록체인에 <strong>기록·실행</strong>시키는 수수료 = 컴퓨터를 일 시키는 "기름값".</p>
+    <div class="stats stagger" style="margin-top:var(--content-gap);">
+      <div class="stat card"><div class="v no">$5~50</div><div class="l">이더리움 메인넷 (ETH로 지불)</div></div>
+      <div class="stat card"><div class="v yes">$0.001~0.01</div><div class="l">Polygon (POL로 지불)</div></div>
+    </div>
+    <div class="analogy reveal">💡 핵심 — 가스비 = "체인에 기록하는 양·횟수"에 비례 → 절약의 모든 뿌리</div>
+  </div>
+</section>
+
+<!-- 8. 스마트 컨트랙트 -->
+<section class="slide">
+  <div class="slide-content">
+    <div class="shead reveal"><h2><span class="lead">1-4</span>스마트 컨트랙트 📜</h2></div>
+    <p class="reveal">블록체인 위에서 <strong>자동 실행되는 프로그램</strong>. 조건 맞으면 사람 없이 코드가 작동.</p>
+    <div class="card reveal" style="margin-top:var(--content-gap);">
+      <p style="font-size:var(--body-size); color:var(--text);">🥤 <strong>자판기 비유</strong> — 1,000원 넣고 버튼 → 콜라 나옴. 누구도 "돈만 먹고 안 줄게" 할 수 없어요. 규칙이 기계에 박혀 있으니까.</p>
+    </div>
+    <ul class="blist stagger" style="margin-top:var(--content-gap);">
+      <li><strong>신뢰 불필요</strong> — 운영자 안 믿어도 코드가 보장</li>
+      <li><strong>변조 불가</strong> — 배포되면 코드를 못 바꿈</li>
+    </ul>
+  </div>
+</section>
+
+<!-- 9. 이더리움 vs L2/사이드체인 -->
+<section class="slide">
+  <div class="slide-content">
+    <div class="shead reveal"><h2><span class="lead">1-5</span>이더리움 vs Polygon 🛣️</h2></div>
+    <p class="reveal">메인넷은 안전하지만 비싸고 느림 → 옆에 <strong>싸고 빠른 보조 도로</strong>(Polygon).</p>
+    <div class="grid stagger" style="grid-template-columns:1fr 1fr; margin-top:var(--content-gap);">
+      <div class="card"><h3>이더리움 메인넷</h3><p>시내 8차선 고속도로 — 가장 안전하지만 통행료 폭등 · 정체</p></div>
+      <div class="card" style="border-color:rgba(42,214,165,.35);"><h3 class="yes">Polygon</h3><p>한산한 새 도로 — 가스비 1/1000, 빠름. <strong>폴리마켓이 사는 곳</strong></p></div>
+    </div>
+    <p class="reveal muted-note" style="margin-top:var(--element-gap);">차이의 핵심 = <strong>보안을 어디서 가져오나</strong>. Polygon은 자체 검증자가 책임지는 <em>사이드체인</em>.</p>
+  </div>
+</section>
+
+<!-- 10. 토큰 표준 -->
+<section class="slide">
+  <div class="slide-content">
+    <div class="shead reveal"><h2><span class="lead">1-6</span>토큰 표준 🪙</h2></div>
+    <p class="reveal">토큰을 만들 때 따르는 "규격". 콘센트처럼 표준을 지키면 어디서나 호환.</p>
+    <div class="grid stagger" style="grid-template-columns:repeat(3,1fr); margin-top:var(--content-gap);">
+      <div class="card"><span class="tag">ERC-20</span><h3 style="margin-top:.4em;">지폐형</h3><p>다 똑같은 토큰 — <span class="gold">USDC</span></p></div>
+      <div class="card"><span class="tag">ERC-721</span><h3 style="margin-top:.4em;">NFT</h3><p>다 다른 유일한 토큰</p></div>
+      <div class="card" style="border-color:rgba(139,108,246,.4);"><span class="tag">ERC-1155</span><h3 style="margin-top:.4em;" class="vio">멀티 토큰</h3><p>한 컨트랙트로 다종 관리 — <span class="yes">Yes</span>/<span class="no">No</span></p></div>
+    </div>
+    <div class="analogy reveal">한 컨트랙트 안에 시장 수천 개의 Yes/No 토큰을 ID로 구분 → 가스 효율적</div>
+  </div>
+</section>
+
+<!-- 11. 지갑·키·서명 -->
+<section class="slide">
+  <div class="slide-content">
+    <div class="shead reveal"><h2><span class="lead">1-7</span>지갑 · 키 · 서명 ✍️</h2></div>
+    <p class="reveal">개인키 = 인감 도장(비밀!), 주소 = 계좌번호, 서명 = "이 거래에 동의" 도장 찍기.</p>
+    <div class="grid stagger" style="grid-template-columns:1fr 1fr; margin-top:var(--content-gap);">
+      <div class="card" style="border-color:rgba(42,214,165,.35);"><h3 class="yes">서명 (Sign)</h3><p>"동의" 도장 → 체인에 안 올라감 → <strong>가스 0, 공짜</strong></p></div>
+      <div class="card"><h3>트랜잭션 전송</h3><p>관공서(체인)에 실제 제출 → 기록됨 → <strong>가스 발생</strong></p></div>
+    </div>
+    <div class="analogy reveal">⭐ 서명 ≠ 전송 — 서명만 내가, 전송은 남이 대신 가능 = 가스리스의 핵심</div>
+  </div>
+</section>
+
+<!-- 12. 오라클 -->
+<section class="slide">
+  <div class="slide-content">
+    <div class="shead reveal"><h2><span class="lead">1-8</span>오라클(Oracle) 🔮</h2></div>
+    <p class="reveal">블록체인은 <strong>바깥세상을 스스로 못 봐요</strong>(창문 없는 자판기). 외부 사실을 체인에 전해주는 다리.</p>
+    <div class="flow stagger" style="margin-top:var(--content-gap);">
+      <div class="node"><h3>컨트랙트</h3><p>"비가 왔나? 난 몰라…"</p></div>
+      <div class="arrow">←</div>
+      <div class="node" style="border-color:rgba(139,108,246,.4);"><h3 class="vio">오라클</h3><p>"응, 비 왔어!" 외부 데이터 전달</p></div>
+    </div>
+    <p class="reveal" style="margin-top:var(--content-gap);">핵심 과제 = <strong>오라클을 어떻게 믿나</strong>. 폴리마켓은 <span class="vio">탈중앙 오라클 UMA</span>를 씀.</p>
+  </div>
+</section>
+
+<!-- 13. 스테이블코인 -->
+<section class="slide">
+  <div class="slide-content">
+    <div class="shead reveal"><h2><span class="lead">1-9</span>스테이블코인 💵</h2></div>
+    <p class="reveal">가격이 <strong>항상 $1에 고정</strong>되도록 설계된 코인 = 암호화폐 세계의 "현금".</p>
+    <div class="grid stagger" style="grid-template-columns:1fr 1fr; margin-top:var(--content-gap);">
+      <div class="card"><h3>ETH로 베팅하면?</h3><p>예측 + 코인가격이 섞임 → 맞춰도 ETH 폭락하면 손해 😵</p></div>
+      <div class="card" style="border-color:rgba(246,196,83,.35);"><h3 class="gold">USDC로 베팅</h3><p>항상 $1 → 순수하게 "예측 적중"만으로 손익 😊</p></div>
+    </div>
+    <div class="analogy reveal">🎫 놀이공원 화폐 — 공원 안에선 항상 $1짜리 전용 화폐로만 결제</div>
+  </div>
+</section>
+
+<!-- 14. 오더북 -->
+<section class="slide">
+  <div class="slide-content">
+    <div class="shead reveal"><h2><span class="lead">1-10</span>오더북(Order Book) 📊</h2></div>
+    <p class="reveal">사자(Bid)·팔자(Ask) 주문이 가격순으로 쌓인 호가창. 주식 앱과 똑같아요.</p>
+    <div class="card reveal mono" style="margin-top:var(--content-gap); font-size:var(--body-size); line-height:1.9;">
+      <div class="no">0.72 │ 100 Yes 팔자 ▲ Ask</div>
+      <div class="no">0.71 │  50 Yes 팔자</div>
+      <div class="muted-note" style="border-top:1px dashed var(--line); padding-top:.3em;">─── 현재가 ───</div>
+      <div class="yes">0.69 │  80 Yes 사자</div>
+      <div class="yes">0.68 │ 200 Yes 사자 ▼ Bid</div>
+    </div>
+    <p class="reveal muted-note" style="margin-top:var(--element-gap);">폴리마켓은 이걸 <strong>오프체인(체인 밖)</strong>에서 운영 → 가스 절약</p>
+  </div>
+</section>
+
+<!-- 15. PART 1 SUMMARY -->
+<section class="slide">
+  <div class="slide-content">
+    <div class="eyebrow reveal">Part 1 · 요약</div>
+    <h2 class="reveal">여기까지 잡았다면 준비 완료</h2>
+    <div class="grid stagger" style="grid-template-columns:1fr 1fr; margin-top:var(--content-gap); font-size:var(--small-size);">
+      <ul class="blist"><li>블록체인 = 못 고치는 공동 장부</li><li>가스비 = 기록 비용 (POL/ETH)</li><li>스마트 컨트랙트 = 자동 자판기</li><li>Polygon = 싸고 빠른 보조 도로</li><li>ERC-1155 = Yes/No 토큰</li></ul>
+      <ul class="blist"><li><strong>서명 ≠ 전송</strong> (가스리스 핵심)</li><li>오라클 = 바깥 정보의 다리</li><li>스테이블코인 = 항상 $1 (USDC)</li><li>오더북 = 사자/팔자 호가창</li></ul>
+    </div>
+  </div>
+</section>
+
+<!-- 15b. 1-11 사용처 지도 -->
+<section class="slide">
+  <div class="slide-content">
+    <div class="shead reveal"><h2><span class="lead">1-11</span>블록체인 기술 → 폴리마켓 사용처 🗺️</h2></div>
+    <p class="reveal">Part 1의 기본기가 폴리마켓 <strong>어디에 박혀 있는지</strong> 한 장으로. 기본기 → 적용처를 잇는 다리.</p>
+    <div class="grid stagger" style="grid-template-columns:1fr 1fr; margin-top:var(--content-gap); font-size:var(--small-size);">
+      <div class="card"><h3>스마트 컨트랙트</h3><p>토큰 발행·정산·지급 자동화</p></div>
+      <div class="card"><h3>Polygon · 가스</h3><p>싼 수수료로 소액베팅 가능</p></div>
+      <div class="card" style="border-color:rgba(139,108,246,.35);"><h3 class="vio">ERC-1155 / ERC-20</h3><p>Yes/No 토큰 · USDC 정산화폐</p></div>
+      <div class="card" style="border-color:rgba(42,214,165,.3);"><h3 class="yes">EIP-712 서명</h3><p>가스 0 오프체인 주문</p></div>
+      <div class="card"><h3>오라클 (UMA)</h3><p>결과 진위 판정</p></div>
+      <div class="card"><h3>오더북 (CLOB)</h3><p>오프체인 Yes/No 거래</p></div>
+    </div>
+    <div class="analogy reveal">다음 Part 2에서 이 조각들이 실제로 조립됩니다</div>
+  </div>
+</section>
+
+<!-- 16. PART 2 DIVIDER -->
+<section class="slide divider">
+  <div class="slide-content" style="justify-content:center;">
+    <div class="eyebrow reveal">Part Two</div>
+    <h1 class="reveal">폴리마켓<br/>작동 원리</h1>
+    <p class="reveal mono" style="margin-top:var(--content-gap);">자금 흐름 순서: 입금 → 토큰화 → 거래 → 판정 → 정산</p>
+    <span class="big-num">2</span>
+  </div>
+</section>
+
+<!-- 17. 예측시장 + 4레이어 -->
+<section class="slide">
+  <div class="slide-content">
+    <div class="shead reveal"><h2><span class="lead">2-A</span>예측시장의 4층 구조</h2></div>
+    <div class="grid stagger" style="margin-top:.5rem; gap:.55rem;">
+      <div class="card" style="border-left:3px solid var(--gold);"><h3>① 정산 자산 — <span class="gold">USDC</span></h3><p>베팅·정산에 쓰는 돈 (항상 $1)</p></div>
+      <div class="card" style="border-left:3px solid var(--accent);"><h3>② 결과 토큰화 — <span class="vio">CTF</span></h3><p>Yes/No 티켓 제조 (ERC-1155)</p></div>
+      <div class="card" style="border-left:3px solid var(--yes);"><h3>③ 거래 엔진 — 오더북</h3><p>오프체인 매칭 + 온체인 정산 (가스 절약)</p></div>
+      <div class="card" style="border-left:3px solid var(--no);"><h3>④ 결과 판정 — <span class="no">UMA</span></h3><p>"결과가 진짜인지" 검증</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- 18. CTF split/merge/redeem -->
+<section class="slide">
+  <div class="slide-content">
+    <div class="shead reveal"><h2><span class="lead">2-B</span>CTF — 티켓 제조 공장</h2></div>
+    <p class="reveal">🎫 놀이공원 티켓 자판기처럼 3개 버튼: <strong>split · merge · redeem</strong></p>
+    <div class="grid stagger" style="grid-template-columns:repeat(3,1fr); margin-top:var(--content-gap);">
+      <div class="card"><h3 class="vio">split</h3><p class="mono">1 USDC → Yes 1 + No 1</p><p>돈을 티켓 세트로</p></div>
+      <div class="card"><h3 class="vio">merge</h3><p class="mono">Yes 1 + No 1 → 1 USDC</p><p>세트를 다시 돈으로</p></div>
+      <div class="card"><h3 class="vio">redeem</h3><p class="mono">이긴 토큰 → $1</p><p>결과 후 당첨금</p></div>
+    </div>
+    <div class="analogy reveal">모든 토큰은 잠긴 USDC로 100% 담보 → 줄 돈이 항상 보장</div>
+  </div>
+</section>
+
+<!-- 19. EQUATION (hero) -->
+<section class="slide">
+  <div class="slide-content" style="justify-content:center; text-align:center;">
+    <div class="eyebrow reveal" style="justify-content:center;">가장 중요한 법칙</div>
+    <div class="equation reveal" style="margin:var(--content-gap) 0;">
+      <span class="pill y">Yes</span><span class="plus">+</span><span class="pill nn">No</span>
+      <span class="eq">=</span><span class="dollar">$1</span>
+    </div>
+    <p class="reveal" style="max-width:46ch; margin:0 auto;">세트(Yes+No)는 언제든 $1로 교환되니, 두 <strong>가격의 합은 항상 $1</strong>. 깨지면 차익거래가 즉시 메워요.</p>
+    <p class="reveal kpi" style="margin-top:var(--content-gap);">그래서 → 가격 = 시장이 보는 확률</p>
+  </div>
+</section>
+
+<!-- 20. 가격=확률 -->
+<section class="slide">
+  <div class="slide-content">
+    <div class="shead reveal"><h2><span class="lead">2-D</span>가격 = 확률</h2></div>
+    <div class="grid stagger" style="grid-template-columns:repeat(3,1fr); margin-top:.5rem;">
+      <div class="card"><div class="stat"><div class="v">0.70</div><div class="l">"70% 확률" · 맞으면 +43%</div></div></div>
+      <div class="card"><div class="stat"><div class="v">0.50</div><div class="l">"반반" · 맞으면 +100%</div></div></div>
+      <div class="card" style="border-color:rgba(246,196,83,.3);"><div class="stat"><div class="v gold">0.20</div><div class="l">"가능성 낮음" · 맞으면 +400% 😮</div></div></div>
+    </div>
+    <p class="reveal" style="margin-top:var(--content-gap);"><strong>싸게 살수록</strong> = 시장이 낮게 봄 = 맞으면 대박·틀리면 0원. <strong>비싸게</strong> = 거의 확실·안전.</p>
+  </div>
+</section>
+
+<!-- 21. 토큰의 탄생 -->
+<section class="slide">
+  <div class="slide-content">
+    <div class="shead reveal"><h2><span class="lead">2-C</span>토큰은 언제 생기나?</h2></div>
+    <p class="reveal">미리 찍어두는 게 아니라 — <strong>USDC가 들어오는 순간 즉석에서 민팅</strong>.</p>
+    <div class="flow stagger" style="margin-top:var(--content-gap);">
+      <div class="node"><div class="n">①</div><h3>시장 생성</h3><p>설계도만 등록 (실물 0)</p></div>
+      <div class="arrow">→</div>
+      <div class="node"><div class="n">②</div><h3>split</h3><p>USDC 입금 → 첫 토큰 탄생 🎉</p></div>
+      <div class="arrow">→</div>
+      <div class="node"><div class="n">③</div><h3>마켓 메이커</h3><p>0.5/0.5로 양쪽 물량 공급</p></div>
+    </div>
+    <p class="reveal muted-note" style="margin-top:var(--element-gap);">처음엔 정보가 없어 "반반(0.5)" → 뉴스가 쌓이며 가격이 갈라짐</p>
+  </div>
+</section>
+
+<!-- 22. 거래: 단타/숏 -->
+<section class="slide">
+  <div class="slide-content">
+    <div class="shead reveal"><h2><span class="lead">2-E</span>거래 — 결과를 안 기다려도 된다</h2></div>
+    <p class="reveal">주식 단타처럼 <strong>중간에 되팔기</strong> 가능.</p>
+    <div class="card reveal mono" style="margin-top:var(--content-gap); font-size:var(--body-size); line-height:1.8;">
+      <div>[월] Yes 10주 <span class="yes">@ 0.50 매수</span> &nbsp;→&nbsp; -$5.00</div>
+      <div>[수] 태풍 뉴스 → Yes 0.70 상승 → <span class="no">@ 0.70 매도</span> &nbsp;→&nbsp; +$7.00</div>
+      <div class="gold" style="border-top:1px dashed var(--line); padding-top:.3em;">결과: 비가 오든 말든 → +$2.00 확정 💰</div>
+    </div>
+    <p class="reveal muted-note" style="margin-top:var(--element-gap);"><strong>숏(하락 베팅)</strong> = 반대편 <span class="no">No</span>를 사면 끝. 복잡한 빌려오기 불필요.</p>
+  </div>
+</section>
+
+<!-- 23. 차익거래 -->
+<section class="slide">
+  <div class="slide-content">
+    <div class="shead reveal"><h2><span class="lead">2-E</span>차익거래 — 등식을 지키는 힘 ⚖️</h2></div>
+    <p class="reveal">일반 사용자는 <strong>하나만</strong> 산다. 차익거래는 가격이 깨졌을 때 <strong>둘 다</strong> 사는 기술.</p>
+    <div class="card reveal mono" style="margin-top:var(--content-gap); font-size:var(--body-size); line-height:1.8;">
+      <div>오더북: <span class="yes">Yes 0.60</span> + <span class="no">No 0.30</span> = 0.90 <span class="no">⚠️ 비정상</span></div>
+      <div>① 둘 다 매수 (-$0.90) &nbsp;② merge → $1.00 환불</div>
+      <div class="gold">결과: 무위험 +$0.10 — 봇이 달려들어 합이 1로 수렴</div>
+    </div>
+    <p class="reveal muted-note" style="margin-top:var(--element-gap);">시장이 <strong>알아서 Yes+No=$1</strong>을 유지하는 자동 균형 장치</p>
+  </div>
+</section>
+
+<!-- 24. MINT 피자 -->
+<section class="slide">
+  <div class="slide-content">
+    <div class="shead reveal"><h2><span class="lead">2-E</span>자동 민팅 — 🍕 피자 비유</h2></div>
+    <p class="reveal">"Yes 사자" + "No 사자"가 만나면? → 둘의 돈을 합쳐 <strong>즉석에서 새 토큰 발행</strong>.</p>
+    <div class="card reveal mono" style="margin-top:var(--content-gap); font-size:var(--body-size); line-height:1.8;">
+      <div><span class="yes">Alice</span>: 왼쪽 반쪽(Yes) $0.60 &nbsp;+&nbsp; <span class="no">Bob</span>: 오른쪽 반쪽(No) $0.40</div>
+      <div>가게(거래소): $1 모아 피자 한 판 만듦 (split=민팅 🍕) → 반쪽씩 분배</div>
+      <div class="gold">두 매수자 = 합치면 "예치자 한 명". 별도 예치 불필요!</div>
+    </div>
+    <p class="reveal muted-note" style="margin-top:var(--element-gap);">가능한 이유 = <strong>Yes+No=1</strong>이라 두 매수가 합이 정확히 세트 1개 값</p>
+  </div>
+</section>
+
+<!-- 25. 가스 절약 3콤보 -->
+<section class="slide">
+  <div class="slide-content">
+    <div class="shead reveal"><h2><span class="lead">2-F</span>가스 절약 — 3중 방어 🛡️</h2></div>
+    <div class="grid stagger" style="grid-template-columns:repeat(3,1fr); margin-top:.5rem;">
+      <div class="card"><span class="tag">콤보 ①</span><h3 style="margin-top:.4em;">체결만 온체인</h3><p>주문·취소·매칭은 오프체인 = <strong>가스 0</strong></p></div>
+      <div class="card" style="border-color:rgba(42,214,165,.3);"><span class="tag">콤보 ②</span><h3 style="margin-top:.4em;" class="yes">싼 Polygon</h3><p>건당 가스가 푼돈</p></div>
+      <div class="card" style="border-color:rgba(139,108,246,.35);"><span class="tag">콤보 ③</span><h3 style="margin-top:.4em;" class="vio">가스리스</h3><p>릴레이어가 대납 → 사용자 체감 0</p></div>
+    </div>
+    <div class="analogy reveal">싼 Polygon은 "받침대" — 대납을 지속 가능하게 함. 진짜 엔진은 ①+③</div>
+  </div>
+</section>
+
+<!-- 26. 배치 정산 -->
+<section class="slide">
+  <div class="slide-content">
+    <div class="shead reveal"><h2><span class="lead">2-F</span>배치 정산 — 단건을 묶기 📦</h2></div>
+    <p class="reveal"><span class="mono">matchOrders</span> = 테이커 1명을 여러 메이커와 <strong>한 트랜잭션</strong>으로 체결.</p>
+    <div class="card reveal mono" style="margin-top:var(--content-gap); font-size:var(--body-size); line-height:1.8;">
+      <div class="muted-note">// 택배 3번 따로 = 배송비 3번</div>
+      <div>따로: [기본비+A][기본비+B][기본비+C]</div>
+      <div class="yes">묶음: [기본비 + A+B+C] → 기본비 1번 🚚</div>
+    </div>
+    <p class="reveal muted-note" style="margin-top:var(--element-gap);">단, <strong>테이커 단위</strong> — 큰 주문일 때만 이득. 소액 1:1은 그냥 건별 (조연)</p>
+  </div>
+</section>
+
+<!-- 27. UMA 오라클 -->
+<section class="slide">
+  <div class="slide-content">
+    <div class="shead reveal"><h2><span class="lead">2-G</span>결과 판정 — UMA Optimistic Oracle</h2></div>
+    <p class="reveal">"대부분 결과는 명백하니 <strong>일단 믿고</strong>, 반박 때만 검증" (낙관적).</p>
+    <div class="flow stagger" style="margin-top:var(--content-gap);">
+      <div class="node"><div class="n">①</div><h3>제안</h3><p>결과 + 보증금</p></div>
+      <div class="arrow">→</div>
+      <div class="node"><div class="n">②</div><h3>이의제기 기간</h3><p>무반박 → 확정 ✅</p></div>
+      <div class="arrow">→</div>
+      <div class="node" style="border-color:rgba(255,93,108,.35);"><div class="n">③</div><h3 class="no">분쟁 시</h3><p>DVM 투표로 판정</p></div>
+    </div>
+    <p class="reveal" style="margin-top:var(--content-gap);"><span class="gold">보증금 몰수/보상</span>으로 정직 강제 — 거짓말하면 돈을 잃는다.</p>
+  </div>
+</section>
+
+<!-- 28. 마켓 메이커 수익 -->
+<section class="slide">
+  <div class="slide-content">
+    <div class="shead reveal"><h2><span class="lead">2-C</span>마켓 메이커는 어떻게 버나? 💰</h2></div>
+    <p class="reveal">시장을 열고 예치한 사람 = <strong>베팅이 아니라 "장사"</strong>로 수익 (직접 참여 말고도!).</p>
+    <div class="grid stagger" style="grid-template-columns:repeat(3,1fr); margin-top:var(--content-gap);">
+      <div class="card" style="border-color:rgba(42,214,165,.3);"><span class="tag">① 스프레드 ⭐</span><h3 style="margin-top:.4em;" class="yes">결과 무관</h3><p>Yes·No 둘 다 팔아 차익 — <span class="mono">1.02 − 1.00 = +0.02</span></p></div>
+      <div class="card"><span class="tag">② 유동성 보상</span><h3 style="margin-top:.4em;">LP 인센티브</h3><p>호가창에 물량만 깔아도 보상</p></div>
+      <div class="card"><span class="tag">③ 거래 수수료</span><h3 style="margin-top:.4em;">AMM형</h3><p>풀 예치 LP가 거래마다 수취</p></div>
+    </div>
+    <div class="analogy reveal">⚠️ 공짜 아님 — 역선택·재고 위험을 감수하는 대가가 스프레드</div>
+  </div>
+</section>
+
+<!-- 29. 수익 모델 -->
+<section class="slide">
+  <div class="slide-content">
+    <div class="shead reveal"><h2><span class="lead">2-I</span>폴리마켓은 어떻게 버나? 💰</h2></div>
+    <p class="reveal">반전 — 거래 수수료를 <strong>오랫동안 0%</strong>로 운영 (점유율 먼저).</p>
+    <div class="grid stagger" style="grid-template-columns:1fr 1fr; margin-top:var(--content-gap);">
+      <div class="card" style="border-color:rgba(246,196,83,.3);"><h3 class="gold">예치금 이자 ★</h3><p>금고에 잠긴 수십억 USDC를 굴려 이자 수익 (보이지 않는 수수료)</p></div>
+      <div class="card"><h3>VC 투자 · 미래 수익화</h3><p>점유율 키운 뒤 수수료·데이터·API로 수익화</p></div>
+    </div>
+    <p class="reveal muted-note" style="margin-top:var(--element-gap);">"수수료 장사"보다 <strong>점유율 먼저, 이자로 버티기</strong> = 테크 스타트업 전략</p>
+  </div>
+</section>
+
+<!-- 29. 전체 흐름 -->
+<section class="slide">
+  <div class="slide-content">
+    <div class="eyebrow reveal">전체 흐름 한 장</div>
+    <h2 class="reveal">자금·토큰의 일생</h2>
+    <div class="flow stagger" style="margin-top:var(--content-gap);">
+      <div class="node"><div class="n">1</div><h3>입금</h3><p>USDC (자동 브릿지)</p></div>
+      <div class="arrow">→</div>
+      <div class="node"><div class="n">2</div><h3>토큰화</h3><p>split → Yes+No</p></div>
+      <div class="arrow">→</div>
+      <div class="node"><div class="n">3</div><h3>거래</h3><p>오더북 · 가스리스</p></div>
+      <div class="arrow">→</div>
+      <div class="node"><div class="n">4</div><h3>판정</h3><p>UMA 오라클</p></div>
+      <div class="arrow">→</div>
+      <div class="node"><div class="n">5</div><h3>정산</h3><p>redeem $1 / $0</p></div>
+    </div>
+    <p class="reveal muted-note" style="margin-top:var(--content-gap);">그동안 금고의 USDC는 이자를 낳음 → 폴리마켓 수익</p>
+  </div>
+</section>
+
+<!-- PART 3 DIVIDER -->
+<section class="slide divider">
+  <div class="slide-content" style="justify-content:center;">
+    <div class="eyebrow reveal">Part Three</div>
+    <h1 class="reveal">심화 &amp; 확장</h1>
+    <p class="reveal" style="margin-top:var(--content-gap); max-width:42ch;">오더북 한 꺼풀 더 · USDC 멀티체인 · Circle Arc · 경쟁 서비스 · 직접 만들기</p>
+    <span class="big-num">3</span>
+  </div>
+</section>
+
+<!-- P3-1. 오더북 심화 -->
+<section class="slide">
+  <div class="slide-content">
+    <div class="shead reveal"><h2><span class="lead">심화</span>오더북 한 꺼풀 더 📈</h2></div>
+    <p class="reveal">현재가는 정해진 값이 아니라 <strong>"가장 최근 체결가"</strong>. 매칭 엔진(메모리·C++/Rust)이 즉시 짝지어요.</p>
+    <div class="grid stagger" style="grid-template-columns:1fr 1fr; margin-top:var(--content-gap);">
+      <div class="card"><h3>메이커 (기다림)</h3><p>맞는 상대 없음 → 호가창에 등록·노출</p></div>
+      <div class="card"><h3>테이커 (덮침)</h3><p>맞는 상대 있음 → 즉시 체결</p></div>
+    </div>
+    <div class="analogy reveal">💡 0.71 불러도 0.70 매물 있으면 → 0.70에 체결 (가격 개선). 매수·매도 둘 다 등록/체결 가능</div>
+  </div>
+</section>
+
+<!-- P3-2. USDC 멀티체인 -->
+<section class="slide">
+  <div class="slide-content">
+    <div class="shead reveal"><h2><span class="lead">확장</span>USDC 멀티체인 💵</h2></div>
+    <p class="reveal">같은 USDC라도 <strong>체인마다 별개</strong>. Circle이 직접 찍은 게 <span class="gold">네이티브</span>, 다리로 옮긴 복제본이 <span class="mono">USDC.e</span>.</p>
+    <div class="grid stagger" style="grid-template-columns:repeat(3,1fr); margin-top:var(--content-gap); font-size:var(--small-size);">
+      <div class="card"><span class="tag">L1</span><p style="margin-top:.4em;">Ethereum · Solana · Avalanche …</p></div>
+      <div class="card"><span class="tag">L2</span><p style="margin-top:.4em;">Arbitrum · Base · Optimism …</p></div>
+      <div class="card" style="border-color:rgba(139,108,246,.35);"><span class="tag">사이드체인</span><p style="margin-top:.4em;" class="vio">Polygon (폴리마켓)</p></div>
+    </div>
+    <p class="reveal muted-note" style="margin-top:var(--element-gap);">EVM = Solidity/ERC-20 · Solana = Rust · Aptos/Sui = Move (체인마다 언어 다름)</p>
+  </div>
+</section>
+
+<!-- P3-3. Circle Arc -->
+<section class="slide">
+  <div class="slide-content">
+    <div class="shead reveal"><h2><span class="lead">확장</span>Circle Arc — USDC가 가스인 L1 🆕</h2></div>
+    <p class="reveal">USDC 발행사 Circle이 만든 <strong>독자 L1</strong>. EVM 호환이라 Solidity 지식 그대로.</p>
+    <div class="grid stagger" style="grid-template-columns:1fr 1fr; margin-top:var(--content-gap);">
+      <div class="card" style="border-color:rgba(246,196,83,.3);"><h3 class="gold">USDC가 네이티브 가스</h3><p>가스비를 달러로 — POL 따로 챙길 필요 없음</p></div>
+      <div class="card"><h3>EVM 호환</h3><p>Foundry · Hardhat · Solidity 그대로 재사용</p></div>
+    </div>
+    <p class="reveal muted-note" style="margin-top:var(--element-gap);">2025 테스트넷 · 2026 메인넷 예정 — 차이는 "가스를 USDC로 낸다" 하나</p>
+  </div>
+</section>
+
+<!-- P3-4. 경쟁 서비스 비교 -->
+<section class="slide">
+  <div class="slide-content">
+    <div class="shead reveal"><h2><span class="lead">확장</span>비슷한 서비스 비교 🆚</h2></div>
+    <div class="grid stagger" style="grid-template-columns:1fr 1fr; margin-top:.5rem; font-size:var(--small-size);">
+      <div class="card" style="border-color:rgba(139,108,246,.35);"><h3 class="vio">Polymarket</h3><p>Polygon · USDC · 오더북 · UMA · 탈중앙</p></div>
+      <div class="card"><h3>Kalshi</h3><p>중앙화 · USD · CFTC 정식 승인 ✅ (미국)</p></div>
+      <div class="card"><h3>Augur</h3><p>이더리움 · 완전 탈중앙 원조 · UX/가스 난점</p></div>
+      <div class="card"><h3>Manifold</h3><p>플레이머니(가짜 돈) · 소셜·재미</p></div>
+    </div>
+    <div class="analogy reveal">폴리마켓 = Kalshi(합법)와 Augur(탈중앙) 사이의 실용적 균형점</div>
+  </div>
+</section>
+
+<!-- P3-5. 직접 만들기 -->
+<section class="slide">
+  <div class="slide-content">
+    <div class="shead reveal"><h2><span class="lead">실전</span>직접 만들기 — Arc에 0부터 🛠️</h2></div>
+    <p class="reveal">맥에서 <strong>맨바닥 → 배포</strong>까지. EVM이라 폴리마켓 Solidity 그대로.</p>
+    <div class="flow stagger" style="margin-top:var(--content-gap);">
+      <div class="node"><div class="n">1</div><h3>Foundry</h3><p>brew · forge 설치</p></div>
+      <div class="arrow">→</div>
+      <div class="node"><div class="n">2</div><h3>faucet</h3><p>가스용 USDC 수령</p></div>
+      <div class="arrow">→</div>
+      <div class="node"><div class="n">3</div><h3>forge create</h3><p>테스트넷 배포</p></div>
+      <div class="arrow">→</div>
+      <div class="node"><div class="n">4</div><h3>cast send</h3><p>split 호출 🎉</p></div>
+    </div>
+    <p class="reveal muted-note" style="margin-top:var(--element-gap);">미니 컨트랙트(split/merge/redeem) → 진짜 Gnosis CTF → UMA 오라클로 졸업</p>
+  </div>
+</section>
+
+<!-- 30. CLOSING -->
+<section class="slide">
+  <div class="slide-content" style="justify-content:center;">
+    <div class="eyebrow reveal">마무리</div>
+    <h1 class="reveal" style="max-width:24ch;">결국, 한 문장</h1>
+    <div class="card reveal" style="margin-top:var(--content-gap); border-left:3px solid var(--yes);">
+      <p style="font-size:var(--h3-size); color:var(--text); line-height:1.5;">
+        <span class="vio mono">Polygon</span> 위에서 <span class="gold mono">USDC</span>로,
+        미래 확률(<span class="yes">Yes</span>/<span class="no">No</span>)을 사고파는 탈중앙 예측시장.
+        토큰은 담보로 <strong>즉석 발행</strong>, 거래는 <strong>가스리스</strong>로 싸게, 결과는 <strong>UMA</strong>가 검증.
+      </p>
+    </div>
+    <p class="reveal" style="margin-top:var(--content-gap);">더 공부할 거리 → <span class="mono">Gnosis CTF · CTF Exchange · EIP-712 · UMA Optimistic Oracle</span></p>
+    <p class="reveal kpi" style="margin-top:var(--element-gap);">감사합니다 · Q &amp; A</p>
+  </div>
+</section>
+
+</main>
+
+<script>
+/* =========================================================
+   Presentation controller: keyboard · wheel · touch · reveal
+   ========================================================= */
+(function () {
+  const slides = Array.from(document.querySelectorAll('.slide'));
+  const progress = document.getElementById('progress');
+  const cur = document.getElementById('cur');
+  const total = document.getElementById('total');
+  total.textContent = String(slides.length).padStart(2, '0');
+
+  let index = 0;
+  let animating = false;
+
+  // Reveal-on-enter via IntersectionObserver
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach((e) => {
+      if (e.isIntersecting && e.intersectionRatio > 0.55) {
+        e.target.classList.add('active');
+        index = slides.indexOf(e.target);
+        updateChrome();
+      }
+    });
+  }, { threshold: [0.55] });
+  slides.forEach((s) => io.observe(s));
+
+  function updateChrome() {
+    progress.style.width = (index / (slides.length - 1)) * 100 + '%';
+    cur.textContent = String(index + 1).padStart(2, '0');
+  }
+
+  function go(to) {
+    to = Math.max(0, Math.min(slides.length - 1, to));
+    animating = true;
+    slides[to].scrollIntoView({ behavior: 'smooth' });
+    index = to;
+    updateChrome();
+    setTimeout(() => (animating = false), 550);
+  }
+
+  // Keyboard
+  window.addEventListener('keydown', (e) => {
+    if (['ArrowDown', 'ArrowRight', 'PageDown', ' '].includes(e.key)) { e.preventDefault(); go(index + 1); }
+    else if (['ArrowUp', 'ArrowLeft', 'PageUp'].includes(e.key)) { e.preventDefault(); go(index - 1); }
+    else if (e.key === 'Home') { e.preventDefault(); go(0); }
+    else if (e.key === 'End') { e.preventDefault(); go(slides.length - 1); }
+  });
+
+  // Wheel (debounced) — complements native scroll-snap
+  let wheelLock = false;
+  window.addEventListener('wheel', (e) => {
+    if (wheelLock || Math.abs(e.deltaY) < 24) return;
+    wheelLock = true;
+    go(index + (e.deltaY > 0 ? 1 : -1));
+    setTimeout(() => (wheelLock = false), 620);
+  }, { passive: true });
+
+  // Touch / swipe
+  let ty = null;
+  window.addEventListener('touchstart', (e) => (ty = e.touches[0].clientY), { passive: true });
+  window.addEventListener('touchend', (e) => {
+    if (ty === null) return;
+    const dy = ty - e.changedTouches[0].clientY;
+    if (Math.abs(dy) > 50) go(index + (dy > 0 ? 1 : -1));
+    ty = null;
+  }, { passive: true });
+
+  // Init
+  slides[0].classList.add('active');
+  updateChrome();
+})();
+</script>
+</body>
+</html>
